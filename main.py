@@ -82,6 +82,10 @@ def main():
 
     # Save video
     save_video(output_video_frames, 'output_videos/output_video.avi')
+    speed_and_distance_estimator.save_avg_speeds(
+        tracks,
+        output_path="output/avg_player_speeds.csv"
+    )
 
 if __name__ == '__main__':
     main()

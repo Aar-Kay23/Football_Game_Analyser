@@ -1,5 +1,7 @@
 import cv2
 import sys 
+import os
+import csv
 sys.path.append('../')
 from utils import measure_distance ,get_foot_position
 
@@ -7,6 +9,43 @@ class SpeedAndDistance_Estimator():
     def __init__(self):
         self.frame_window=5
         self.frame_rate=24
+        
+    def save_avg_speeds(self, tracks, output_path):
+        """
+        Saves average speed of each player, grouped by team, to a CSV file.
+        """
+        player_speeds = {}  # {player_id: [speeds]}
+        player_teams = {}   # {player_id: team_id}
+
+        for frame_tracks in tracks["players"]:
+            for player_id, track_info in frame_tracks.items():
+                speed = track_info.get("speed", None)
+                team = track_info.get("team", None)
+                if speed is not None:
+                    player_speeds.setdefault(player_id, []).append(speed)
+                if team is not None:
+                    player_teams[player_id] = team
+
+        avg_speeds = []
+        for player_id, speeds in player_speeds.items():
+            avg_speed = sum(speeds) / len(speeds) if speeds else 0
+            team = player_teams.get(player_id, "Unknown")
+            avg_speeds.append({
+                "player_id": player_id,
+                "team": team,
+                "avg_speed_kmh": round(avg_speed, 2)
+            })
+
+        # Group by team and sort by player_id
+        avg_speeds.sort(key=lambda x: (x["team"], x["player_id"]))
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, "w", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=["player_id", "team", "avg_speed_kmh"])
+            writer.writeheader()
+            for row in avg_speeds:
+                writer.writerow(row)
+
     
     def add_speed_and_distance_to_tracks(self,tracks):
         total_distance= {}
